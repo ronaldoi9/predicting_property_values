@@ -3,18 +3,25 @@ import numpy as np
 import seaborn as sns
 import os.path as path
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.figure_factory as ff
+import plotly.express as px
+from math import sqrt
+from scipy import stats
 from sklearn.datasets import load_boston
 from sklearn.model_selection import train_test_split
-from pandas_profiling import ProfileReport
-import plotly.graph_objects as go
-from sklearn.metrics import mean_squared_error
-from math import sqrt
 from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from pandas_profiling import ProfileReport
 
 # ================ Understanding dataset ===================
 
-def load_dataset():
-    print('\t *** Load dataset ***\n')
+def load_boston_dataset():
+    print('=============================================\n')
+    print('\t\tLoad dataset\n')
+    print('=============================================\n')
     # load dataset
     boston = load_boston()
 
@@ -25,19 +32,68 @@ def load_dataset():
     data['MEDV'] = boston.target
 
     print('> Successfully loaded\n')
+    print('=============================================\n')
     return data
 
 def building_pandas_profiling(data):
     
     # creating pandas profiling to understand data behavior
     profile = ProfileReport(data, title='Report - Pandas Profiling', html={'style':{'full_width':True} })
-    profile.to_file('report/report_profiling.html')
+    profile.to_file('data_report/report_profiling.html')
 
 # ================ Exploratory analysis ================
 
+def outliers_treatment(data):
+
+    print('\t\tOutliers Treatment\n')
+    print('=============================================\n')
+    # statistical describe variable MEDV 
+    print(f'> Describe MEDV:\n\n {data.MEDV.describe()}\n')
+
+    # show medv distribution
+    labels = ['Distribuição da variável MEDV (preço médio do imóvel)']
+    fig = ff.create_distplot([data.MEDV], labels, bin_size=.2)
+    fig.write_html('graphs/outliers_treatment/medv_distribution.html')
+
+    # evaluate pearson coef.
+    print(f'> Pearson coefficient: {stats.skew(data.MEDV)}\n')
+
+    # histogram plot MEDV (target variable)
+    fig = px.histogram(data, x='MEDV', nbins=50, opacity=0.50)
+    fig.write_html('graphs/outliers_treatment/medv_histogram.html')
+
+    # show MEDV outliers
+    fig = px.box(data, y='MEDV')
+    fig.update_layout( width=800,height=800)
+    fig.write_html('graphs/outliers_treatment/medv_box_outliers.html')
+
+    # print top 16 highest values from MEDV by RM
+    print(f"> TOP 16 MEDV by RM:\n\n{data[['RM', 'MEDV']].nlargest(16, 'MEDV')}\n")
+    
+    # filter top 16 highest MEDV values
+    top16 = data.nlargest(16, 'MEDV').index
+
+    # remove all top16 values (outliers values)
+    data.drop(top16, inplace=True)
+    print(f'> Removing outliers...\n')
+
+    # show medv distribution after remove outliers values
+    labels = ['Distribuição da variável MEDV (depois da remoção de outliers)']
+    fig = ff.create_distplot([data.MEDV], labels, bin_size=.2)
+    fig.write_html('graphs/outliers_treatment/medv_distribution_after_remove_outliers.html')
+
+    # # histogram plot MEDV after remove outliers values (target variable)
+    fig = px.histogram(data, x="MEDV", nbins=50, opacity=0.50)
+    fig.write_html('graphs/outliers_treatment/medv_histogram_after_remove_outliers.html')
+
+    print(f'> Pearson coefficient after treatment: {stats.skew(data.MEDV)}\n')
+    print('=============================================\n')
+
+# ================ Deploy ================
 def building_baseline(data):
     
-    print('\t *** Building a baseline ***\n')
+    print('\t\tBuilding a baseline\n')
+    print('=============================================\n')
     # converting data
     data.RM = data.RM.astype(int)
 
@@ -57,12 +113,12 @@ def building_baseline(data):
     
     data['categories'] = categories
 
-    print(f'> Number of categories:\n{data.categories.value_counts()}\n')
+    print(f'> Number of categories:\n\n{data.categories.value_counts()}\n')
 
     # agroup categories and calcule houses averages
     price_averages_by_categories = data.groupby(by='categories')['MEDV'].mean()
 
-    print(f'> Average Price:\n {price_averages_by_categories}\n')
+    print(f'> Baseline Average Prices:\n\n{price_averages_by_categories}\n')
 
     dict_baseline = {
         'Large': price_averages_by_categories[0], 
@@ -70,6 +126,7 @@ def building_baseline(data):
         'Small': price_averages_by_categories[2]
     }
 
+    print('=============================================\n')
     return dict_baseline
 
 def consult_average_price(dict_baseline, n_rooms):
@@ -104,7 +161,8 @@ def creating_train_and_test_variables(data):
 
 def baseline_predictions(data, baseline):
 
-    print('\t *** Baseline prediction ***\n')
+    print('\t\tBaseline prediction\n')
+    print('=============================================\n')
 
     X_train, X_test, y_train, y_test = creating_train_and_test_variables(data)
 
@@ -115,13 +173,13 @@ def baseline_predictions(data, baseline):
         n_room = avarage_number_rooms[1]
         predict.append(consult_average_price(baseline, n_room))
 
-    calculate_mean_square_error(y_test, predict)
-
     compare_predictions(y_test, predict, 'baseline')
+
+    return calculate_mean_square_error(y_test, predict)
 
 def compare_predictions(y_test, predict, metric_name):
 
-    print('\t *** Compare predictions ***\n')
+    print('\t\t*** Compare predictions ***\n')
 
     df_results = pd.DataFrame()
 
@@ -141,16 +199,18 @@ def compare_predictions(y_test, predict, metric_name):
     print(f'> Saving predict logs in {output}\n')
 
 def calculate_mean_square_error(y_test, predict):
-    print('\n\t *** Calculate mean square error ***\n')
+    print('\n\t*** Calculate mean square error ***\n')
 
     rmse = (np.sqrt(mean_squared_error(y_test, predict)))
 
     print(f'> Mean square error: {rmse}\n')
+    print('=============================================\n')
+    return rmse
 
+def predict_values_by_linear_regression(data):
 
-def predict_values_by_regression_linear(data):
-
-    print('\t *** Linear Regression prediction ***\n')
+    print('\t\tLinear Regression prediction\n')
+    print('=============================================\n')
 
     X_train, X_test, y_train, y_test = creating_train_and_test_variables(data)
     
@@ -163,12 +223,52 @@ def predict_values_by_regression_linear(data):
     # evaluate model with test data 
     y_pred = lin_model.predict(X_test)
 
-    calculate_mean_square_error(y_test, y_pred)
     compare_predictions(y_test, y_pred, 'linear_regression')
+
+    return calculate_mean_square_error(y_test, y_pred)
+
+def predict_values_by_decision_tree(data):
+
+    print('\t\tDecision Tree prediction\n')
+    print('=============================================\n')
+
+    X_train, X_test, y_train, y_test = creating_train_and_test_variables(data)
+
+    decision_tree = DecisionTreeRegressor()
+
+    # fit model
+    decision_tree.fit(X_train, y_train)
+
+    # evaluate model with test data
+    y_pred = decision_tree.predict(X_test)
+
+    compare_predictions(y_test, y_pred, 'decision_tree')
+
+    return calculate_mean_square_error(y_test, y_pred)
+
+def predict_value_by_random_forest(data):
+
+    print('\t\tDecision Tree prediction\n')
+    print('=============================================\n')
+
+    X_train, X_test, y_train, y_test = creating_train_and_test_variables(data)
+
+    random_forest = RandomForestRegressor()
+
+    # fit model
+    random_forest.fit(X_train, y_train)
+
+    # evaluate model with test data
+    y_pred = random_forest.predict(X_test)
+
+    compare_predictions(y_test, y_pred, 'random_forest')
+
+    return calculate_mean_square_error(y_test, y_pred)
 
 def creating_dynamic_graph():
 
-    print('\n\t *** Creating html dynamic graph ***\n')
+    print('\t\tCreating html dynamic graph\n')
+    print('=============================================\n')
 
     input_file = 'logs/predict_logs.tsv'
     predict_log = pd.read_csv(input_file, sep='\t')
@@ -187,12 +287,25 @@ def creating_dynamic_graph():
                              mode='lines+markers',
                              name=f'Predict Value Baseline'))
 
-     # row with predict data by linear regression
+    # row with predict data by linear regression
     fig.add_trace(go.Scatter(x=predict_log.index,
                              y=predict_log.predict_value_by_linear_regression,
                              mode='lines+markers',
                              name=f'Predict Value Linear Regression'))
 
-    fig.write_html('../graphs/predictions_log.html')
+    # row with predict data by decision tree
+    fig.add_trace(go.Scatter(x=predict_log.index,
+                             y=predict_log.predict_value_by_decision_tree,
+                             mode='lines+markers',
+                             name='Predict Value Decision Tree'))
+
+    # row with predict data by random forest
+    fig.add_trace(go.Scatter(x=predict_log.index,
+                             y=predict_log.predict_value_by_random_forest,
+                             mode='lines+markers',
+                             name='Predict Value Random Forest'))
+
+    fig.write_html('graphs/predictions/predictions_log.html')
 
     print(f'> Html dynamic file successfully created\n')
+    print('=============================================\n')
