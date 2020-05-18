@@ -47,7 +47,7 @@ st.dataframe(data[cols].head(10))
 st.subheader("Distribuição de imóveis por preço")
 
 # define range of values
-range_values = st.slider("Faixa de preço", float(data.MEDV.min()), 150., (10.0, 100.0))
+range_values = st.slider("Faixa de preço", float(data.MEDV.min()), 50., (10.0, 50.0))
 
 # filter data
 datas_to_show = data[data['MEDV'].between(left=range_values[0],right=range_values[1])]
