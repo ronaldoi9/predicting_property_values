@@ -47,18 +47,13 @@ For bests results, i apply Machine Learn algorithms, in order to get close of Re
 - ### **Random Forest**
 ![random_forest](https://user-images.githubusercontent.com/40616142/82163483-e0ec3100-9881-11ea-999a-b15134a4b51d.jpg)
 
-### **Errors**
+## **Performance**
 To measure the real performance of the algorithms, the mean squared error is calculated.
 
-- Baseline error: 6.21
-- Linear Regression error: 4.46
-- Dicision Tree error: 4.42
-- Random Forest error: 3.33
+- **Baseline error**: `6.21`
+- **Linear Regression error**: `4.46`
+- **Dicision Tree error**: `4.42`
+- **Random Forest error**: `3.33`
 
 The **Random Forest** algorithms was the best results along others. Then he will be the algorithm used to build the data app.
-
-## Getting started
-
-
-## Conclusion
 
